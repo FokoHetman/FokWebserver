@@ -60,11 +60,13 @@ fn handle_connection(mut stream: TcpStream) {
   let mut response = Response::new();
 
   match dir {
-    "home" => {
-
+    "/" | "/home" | "/homepage" | "/index" | "/index.html" => {
+      response.body = web::render_template("templates/index.html", vec![]);
+      response.code = 200;
     },
     _ => {
-      response.body = web::render_template("templates/404.html");
+      println!("{}", dir);
+      response.body = web::render_template("templates/404.html", vec![]);
       response.code = 404;
     },
   }
