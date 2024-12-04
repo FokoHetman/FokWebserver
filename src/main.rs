@@ -23,7 +23,7 @@ impl Response {
   }
   fn get_status(&self) -> &str {
     match self.code {
-      100 => "CONTINUE",
+      100 => "CONTINUE",  // idk what that is lol
       200 => "OK",
       404 => "NOT FOUND",
       _ => "UNKNOWN",
