@@ -2,10 +2,9 @@ use std::fs;
 
 
 
-pub fn render_template(path: &str, args: Vec<(String, String)>) -> String {
+pub fn render_template(path: &str, args: Vec<(String, Fructa)>) -> String {
   let template = fs::read_to_string(path).unwrap();
   let tokens = tokenize_template(template.clone());
-  
   return parse(tokens, args);
 }
 
@@ -51,24 +50,25 @@ pub fn tokenize_template(template: String) -> Vec<TemplateToken>{
   result
 }
 
-pub fn parse(tokens: Vec<TemplateToken>, args: Vec<(String, String)>) -> String {
+pub fn parse(tokens: Vec<TemplateToken>, args: Vec<(String, Fructa)>) -> String {
   let mut result = String::new();
   println!("{:#?}", tokens);
   let mut parser = Parser {tokens: vec![]};
+  let mut env =  Env{data: args};
   for i in tokens {
     result += &match i {
       TemplateToken::Irrelevant(s) => s,
-      TemplateToken::CodeBlock(s) => template_lang(s, args.clone(), &mut parser.clone()),
+      TemplateToken::CodeBlock(s) => template_lang(s, &mut parser.clone(), &mut env),
     }
   }
   result
 }
 
-pub fn template_lang(string: String, args: Vec<(String, String)>, parser: &mut Parser) -> String {
+pub fn template_lang(string: String, parser: &mut Parser, env: &mut Env) -> String {
   let tokens = tokenize_lang(string);
   println!("{:#?}", tokens);
   
-  parse_lang(tokens, parser)
+  parse_lang(tokens, parser, env)
 }
 
 #[derive(Debug,PartialEq,Clone)]
@@ -102,8 +102,11 @@ pub enum Node {
   Float(f64),
   Str(String),
   List(Vec<Box<Node>>),
+
+  Identifier(String),
 }
 
+#[derive(Debug,Clone,PartialEq)]
 pub enum Fructa {
   Numerum(f64),
   Str(String),
@@ -129,19 +132,19 @@ impl Fructa {
   }
 }
 
-pub fn parse_lang(tokens: Vec<Token>, parser: &mut Parser) -> String {
+pub fn parse_lang(tokens: Vec<Token>, parser: &mut Parser, env: &mut Env) -> String {
   let tokens = tokens.clone();
 
   let mut nodes: Vec<Node> = vec![];
   parser.tokens = tokens.clone();
 
   while parser.tokens.len()>0 {
-    let panics = std::panic::catch_unwind(|| {let mut parser = parser.clone(); let val = parser.parse_primary(tokens[0].clone()); (parser.tokens.clone(), val)});
+    let panics = std::panic::catch_unwind(|| {let mut parser = parser.clone(); let val = parser.rparse(); (parser.tokens.clone(), val)});
     if panics.is_ok()  {
       let uw = panics.unwrap();
       nodes.push(uw.1);
       parser.tokens = uw.0;
-      println!("!!!: {:#?}", parser.tokens)
+      //println!("!!!: {:#?}", parser.tokens)
     } else {
       return "<code>CodeBlock Error</code>".to_string();
     }
@@ -150,7 +153,7 @@ pub fn parse_lang(tokens: Vec<Token>, parser: &mut Parser) -> String {
 
   let mut last_fruit = Fructa::Nullus;
   for node in nodes {
-    last_fruit = evaluate(node);
+    last_fruit = evaluate(node, env);
   }
   
   
@@ -166,25 +169,41 @@ fn mul_str(str: String, n: i32) -> String {
   res
 }
 
-pub fn evaluate(node: Node) -> Fructa {
+pub struct Env {
+  data: Vec<(String, Fructa)>,
+}
+impl Env {
+  fn get(&self, id: String) -> Fructa {
+    for i in &self.data {
+      if i.0==id {
+        return i.1.clone();
+      }
+    }
+    return Fructa::Nullus
+  }
+}
+
+
+pub fn evaluate(node: Node, env: &mut Env) -> Fructa {
   match node {
     Node::Str(string) => Fructa::Str(string),
     Node::Integer(i) => Fructa::Numerum(i as f64),
     Node::Float(f) => Fructa::Numerum(f),
+    Node::Identifier(id) => env.get(id),
     Node::BinaryOperation(l, r, o) => {
       match o {
         Operator::Addition => {
-          match evaluate(*l) {
+          match evaluate(*l, env) {
             Fructa::Numerum(i) => {
 
-              match evaluate(*r) {
+              match evaluate(*r, env) {
                 Fructa::Numerum(i2) => Fructa::Numerum(i2  +  i),
                 Fructa::Str(s) => Fructa::Str(i.to_string() + &s),
                 _ => panic!("not supported operation")
               }
             },
             Fructa::Str(s) => {
-              match evaluate(*r) {
+              match evaluate(*r, env) {
                 Fructa::Numerum(i2) => Fructa::Str(s + &i2.to_string()),
                 Fructa::Str(s2) => Fructa::Str(s + &s2),
                 _ => panic!("not supported operation")
@@ -195,10 +214,10 @@ pub fn evaluate(node: Node) -> Fructa {
           }
         },
         Operator::Substraction => {
-          match evaluate(*l) {
+          match evaluate(*l, env) {
             Fructa::Numerum(i) => {
 
-              match evaluate(*r) {
+              match evaluate(*r, env) {
                 Fructa::Numerum(i2) => Fructa::Numerum(i  -  i2),
                 _ => panic!("not supported operation")
               }
@@ -207,17 +226,17 @@ pub fn evaluate(node: Node) -> Fructa {
           }
         },
         Operator::Multiplication => {
-          match evaluate(*l) {
+          match evaluate(*l, env) {
             Fructa::Numerum(i) => {
 
-              match evaluate(*r) {
+              match evaluate(*r, env) {
                 Fructa::Numerum(i2) => Fructa::Numerum(i2  *  i),
                 Fructa::Str(s) => Fructa::Str(mul_str(s, i as i32)),
                 _ => panic!("not supported operation")
               }
             },
             Fructa::Str(s) => {
-              match evaluate(*r) {
+              match evaluate(*r, env) {
                 Fructa::Numerum(i2) => Fructa::Str(s + &i2.to_string()),
                 _ => panic!("not supported operation")
               }
@@ -227,10 +246,10 @@ pub fn evaluate(node: Node) -> Fructa {
           }
         },
         Operator::Division => {
-          match evaluate(*l) {
+          match evaluate(*l, env) {
             Fructa::Numerum(i) => {
 
-              match evaluate(*r) {
+              match evaluate(*r, env) {
                 Fructa::Numerum(i2) => Fructa::Numerum(i  /  i2),
                 _ => panic!("not supported operation")
               }
@@ -264,10 +283,23 @@ impl Parser {
     value
   }
   pub fn rparse(&mut self) -> Node {
-    let left = self.parse_primary(self.tokens[0].clone());
+    let left = self.parse_addition(self.tokens[0].clone());
     left
   }
 
+  pub fn parse_addition(&mut self, token: Token) -> Node {
+    let mut left = self.parse_primary(token);
+    
+    if self.tokens.len()>0 && [Token::Operator(Operator::Addition), Token::Operator(Operator::Substraction)].contains(&self.tokens[0]) {
+      let operator = match self.eat() {
+        Token::Operator(o) => o,
+        _ => panic!("no")
+      };
+      let rparse = self.rparse();
+      left = Node::BinaryOperation(Box::new(left), Box::new(rparse), operator);
+    }
+    left
+  }
 
   pub fn parse_primary(&mut self, token: Token) -> Node {
     let value = self.eat();
@@ -282,6 +314,8 @@ impl Parser {
       },
       Token::Int(i) => Node::Integer(i),
       Token::Float(f) => Node::Float(f),
+      Token::Identifier(id) => Node::Identifier(id),
+      Token::Str(s) => Node::Str(s),
       _ => panic!("Invalid primary token: {:#?}", token),
     }
   }
@@ -306,8 +340,10 @@ pub fn tokenize_lang(string: String) -> Vec<Token> {
       '/' => {result.push(Token::Operator(Operator::Division))},
       '\"' => {
         let mut buffer = String::new();
+        chars.remove(0);
         while chars[0]!='"' {
           buffer+=&chars[0].to_string();
+          chars.remove(0);
         }
         result.push(Token::Str(buffer));
       },

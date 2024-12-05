@@ -59,18 +59,27 @@ fn handle_connection(mut stream: TcpStream) {
 
   let mut response = Response::new();
 
-  match dir {
-    "/" | "/home" | "/homepage" | "/index" | "/index.html" => {
-      response.body = web::render_template("templates/index.html", vec![]);
-      response.code = 200;
-    },
-    _ => {
-      println!("{}", dir);
-      response.body = web::render_template("templates/404.html", vec![]);
-      response.code = 404;
-    },
+  if dir.starts_with("/static/") && !dir.contains("..") {
+    let _ = stream.write(&fs::read(dir[1..].to_string()).unwrap());
+  } else {
+
+    match dir {
+      "/" | "/home" | "/homepage" | "/index" | "/index.html" => {
+        response.body = web::render_template("templates/index.html", vec![("username".to_string(), web::Fructa::Str("Foko".to_string()))]);
+        response.code = 200;
+      },
+      "/favicon.ico" => {
+        let _ = stream.write(&fs::read(dir[1..].to_string()).unwrap());
+        return;
+      },
+      _ => {
+        println!("{}", dir);
+        response.body = web::render_template("templates/404.html", vec![]);
+        response.code = 404;
+      },
+    }
+    let _ = stream.write(response.build().as_bytes());
   }
-  let _ = stream.write(response.build().as_bytes());
 }
 
 
