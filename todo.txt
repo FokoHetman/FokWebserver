@@ -1,1 +1,5 @@
-ENV
+finish template lang:
+* loops
+* conditionals
+* parsing !!
+
