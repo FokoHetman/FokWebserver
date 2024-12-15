@@ -5,6 +5,8 @@ use std::{
 mod utils;
 use utils::threading::ThreadPool;
 use utils::web;
+pub mod lib;
+use lib::json;
 
 struct Response {
   body: String,
@@ -48,6 +50,38 @@ fn estabilish_listener(ip: &str) {
   }
 }
 
+
+
+fn load_lang(lang: &str) -> Vec<(Box<web::Fructa>, Box<web::Fructa>)> {
+  let mut result = vec![];
+
+  let lang_json = json::parse_json(fs::read_to_string("translations/".to_string()+&lang+".json").unwrap());
+  match lang_json.body {
+    json::JsonElem::Dict(d) => {
+      for i in d {
+        result.push(
+          (match i.0 {
+            json::JsonElem::String(s) => {
+              Box::new(web::Fructa::Str(s))
+            },
+            _ => panic!("?")
+          },
+          match i.1 {
+            json::JsonElem::String(s) => {
+              Box::new(web::Fructa::Str(s))
+            },
+            _ => panic!("?")
+          }
+          ));
+      }
+    }
+    _ => panic!("No lang file found: {}", lang)
+  }
+
+  result
+}
+
+
 fn handle_connection(mut stream: TcpStream) {
   let mut buffer = [0; 1024];
   stream.read(&mut buffer).unwrap();
@@ -55,6 +89,13 @@ fn handle_connection(mut stream: TcpStream) {
   let contents = req.split("\r\n\r\n").collect::<Vec<&str>>()[1].replace("\0","");
   println!("request: {}", req);
   let dir = req.split(" ").collect::<Vec<&str>>()[1];
+
+
+
+  let languages = 
+      ("translations".to_string(), web::Fructa::Dictario(vec![
+        (Box::new(web::Fructa::Str("en_us".to_string())), Box::new(web::Fructa::Dictario(load_lang("en_us")))),
+      ]));
 
 
   let mut response = Response::new();
@@ -65,7 +106,18 @@ fn handle_connection(mut stream: TcpStream) {
 
     match dir {
       "/" | "/home" | "/homepage" | "/index" | "/index.html" => {
-        response.body = web::render_template("templates/index.html", vec![("username".to_string(), web::Fructa::Str("Foko".to_string()))]);
+        response.body = web::render_template("templates/index.html", vec![
+            ("username".to_string(), web::Fructa::Str("Foko".to_string())),
+            ("lang".to_string(), web::Fructa::Str("en_us".to_string())),
+            languages
+        ]);
+        response.code = 200;
+      },
+      "/test" => {
+        response.body = web::render_template("templates/test.html", vec![
+            ("lang".to_string(), web::Fructa::Str("en_us".to_string())),
+            languages
+        ]);
         response.code = 200;
       },
       "/favicon.ico" => {

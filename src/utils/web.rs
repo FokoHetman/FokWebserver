@@ -81,6 +81,8 @@ pub enum Token {
   Cparen,
   OCparen,
   CCparen,
+  OSparen,
+  CSparen,
   Operator(Operator),
 }
 
@@ -92,6 +94,7 @@ pub enum Operator {
   Multiplication,
   Division,
   Exponentiation,
+  Indexation,
   Range,//..
 }
 
@@ -104,6 +107,8 @@ pub enum Node {
   List(Vec<Box<Node>>),
 
   Identifier(String),
+
+  Indexation(Box<Node>, Box<Node>),
 }
 
 #[derive(Debug,Clone,PartialEq)]
@@ -111,6 +116,7 @@ pub enum Fructa {
   Numerum(f64),
   Str(String),
   Inventarii(Vec<Box<Fructa>>),
+  Dictario(Vec<(Box<Fructa>, Box<Fructa>)>),
   Nullus
 }
 
@@ -150,6 +156,7 @@ pub fn parse_lang(tokens: Vec<Token>, parser: &mut Parser, env: &mut Env) -> Str
     }
 
   }
+  println!("{:#?}", nodes);
 
   let mut last_fruit = Fructa::Nullus;
   for node in nodes {
@@ -186,12 +193,49 @@ impl Env {
 
 pub fn evaluate(node: Node, env: &mut Env) -> Fructa {
   match node {
-    Node::Str(string) => Fructa::Str(string),
+    Node::Str(string) => Fructa::Str(string.replace("\n", "<br>")),
     Node::Integer(i) => Fructa::Numerum(i as f64),
     Node::Float(f) => Fructa::Numerum(f),
     Node::Identifier(id) => env.get(id),
+    Node::Indexation(l, r) => {
+      let d = evaluate(*l, env);
+      println!("{:#?}", d);
+      match d {
+        Fructa::Dictario(d) => {
+          let rstr = match *r {
+            Node::Str(s) => env.get(s),
+            Node::Identifier(s) => Fructa::Str(s),
+            _ => panic!("?")
+          };
+          match rstr {
+            Fructa::Str(s) => {
+              println!("{}", s);
+              for i in d.clone() {
+                match *i.0 {
+                  Fructa::Str(s2) => {
+                    println!("{}", s2);
+                    if s==s2 {
+                      return *i.1;
+                    }
+                  }
+                  _ => panic!("?")
+                }
+              }
+              println!("{:#?}", d);
+              panic!("not found")
+            },
+            _ => panic!("?")
+          }
+
+        }
+        _ => panic!("not a dict")
+      }
+    },
     Node::BinaryOperation(l, r, o) => {
       match o {
+        /*Operator::Indexation => {
+          
+        },*/
         Operator::Addition => {
           match evaluate(*l, env) {
             Fructa::Numerum(i) => {
@@ -283,27 +327,48 @@ impl Parser {
     value
   }
   pub fn rparse(&mut self) -> Node {
-    let left = self.parse_addition(self.tokens[0].clone());
+    let left = self.parse_addition();
     left
   }
 
-  pub fn parse_addition(&mut self, token: Token) -> Node {
-    let mut left = self.parse_primary(token);
+  pub fn parse_addition(&mut self) -> Node {
+    let mut left = self.parse_multiplication();
     
-    if self.tokens.len()>0 && [Token::Operator(Operator::Addition), Token::Operator(Operator::Substraction)].contains(&self.tokens[0]) {
+    while self.tokens.len()>0 && [Token::Operator(Operator::Addition), Token::Operator(Operator::Substraction)].contains(&self.tokens[0]) {
       let operator = match self.eat() {
         Token::Operator(o) => o,
         _ => panic!("no")
       };
-      let rparse = self.rparse();
+      let rparse = self.parse_multiplication();
       left = Node::BinaryOperation(Box::new(left), Box::new(rparse), operator);
     }
     left
   }
+  pub fn parse_multiplication(&mut self) -> Node {
+    let mut left = self.parse_indexation();
+    while self.tokens.len()>0 && [Token::Operator(Operator::Multiplication), Token::Operator(Operator::Division)].contains(&self.tokens[0]) {
+      let operator = match self.eat() {
+        Token::Operator(o) => o,
+        _ => panic!("no")
+      };
+      let rparse = self.parse_indexation();
+      left = Node::BinaryOperation(Box::new(left), Box::new(rparse), operator);
+    }
+    left
 
-  pub fn parse_primary(&mut self, token: Token) -> Node {
-    let value = self.eat();
-    println!("{:#?}::{:#?}", value, self.tokens);
+  }
+  pub fn parse_indexation(&mut self) -> Node {
+    let mut left = self.parse_primary();
+    while self.tokens.len()>0 && [Token::Operator(Operator::Indexation)].contains(&self.tokens[0]) {
+      let _ = self.eat();
+      left = Node::Indexation(Box::new(left), Box::new(self.parse_primary()));
+    }
+    left
+  }
+
+  pub fn parse_primary(&mut self) -> Node {
+    let value = self.eat(); // same as token
+    //println!("{:#?}::{:#?}", value, self.tokens);
     match value {
       Token::Oparen => {
         
@@ -316,7 +381,7 @@ impl Parser {
       Token::Float(f) => Node::Float(f),
       Token::Identifier(id) => Node::Identifier(id),
       Token::Str(s) => Node::Str(s),
-      _ => panic!("Invalid primary token: {:#?}", token),
+      _ => panic!("Invalid primary token: {:#?}", value),
     }
   }
 }
@@ -329,19 +394,26 @@ pub fn tokenize_lang(string: String) -> Vec<Token> {
 
   let mut result: Vec<Token> = vec![];
   while chars.len()>0 {
+    println!("{}", chars[0]);
     match chars[0] {
       '(' => {result.push(Token::Oparen)},
       ')' => {result.push(Token::Cparen)},
       '{' => {result.push(Token::OCparen)},
       '}' => {result.push(Token::CCparen)},
+      '[' => {result.push(Token::OSparen)},
+      ']' => {result.push(Token::CSparen)},
       '+' => {result.push(Token::Operator(Operator::Addition))},
       '-' => {result.push(Token::Operator(Operator::Substraction))},
       '*' => {result.push(Token::Operator(Operator::Multiplication))},
       '/' => {result.push(Token::Operator(Operator::Division))},
+      '.' => {result.push(Token::Operator(Operator::Indexation))},
       '\"' => {
         let mut buffer = String::new();
         chars.remove(0);
         while chars[0]!='"' {
+          if chars[0]=='\\' && chars[1]=='"' {
+            chars.remove(0);
+          }
           buffer+=&chars[0].to_string();
           chars.remove(0);
         }
@@ -354,7 +426,7 @@ pub fn tokenize_lang(string: String) -> Vec<Token> {
             buffer += &chars[0].to_string();
             chars.remove(0);
           }
-          if chars[0]=='.' {
+          if chars.len()>0 && chars[0]=='.' {
             buffer += ".";
             chars.remove(0);
             while chars.len()>0 && chars[0].is_numeric() {
@@ -367,9 +439,9 @@ pub fn tokenize_lang(string: String) -> Vec<Token> {
           }
           continue
         } else {
-          if chars[0].is_alphabetic() {
+          if chars[0].is_alphabetic() || ['_'].contains(&chars[0]) {
             let mut buffer = String::new();
-            while chars.len()>0 && chars[0].is_alphabetic() {
+            while chars.len()>0 && (chars[0].is_alphabetic() || ['_'].contains(&chars[0])) {
               buffer += &chars[0].to_string();
               chars.remove(0);
             }
