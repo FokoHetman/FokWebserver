@@ -12,12 +12,15 @@
   <div id="navbar">
     <a class="active" href="/">{{translations."lang".navbar_index}}</a>
     <a href="/courses">{{translations."lang".navbar_courses}}</a>
-    <a href="#contact">Contact</a>
-    <a href="#about">About</a>
+    <a href="/projects">{{translations."lang".navbar_projects}}</a>
+    <div class="right">
+      <button> romanum(embed image here) </button>
+      <a href="/account"><img src="static/assets/whar.png"></a>
+    </div>
   </div>
 
   <div class="contents" style="padding-left:16px">
-    <h2 class="text">Szczęść Boże, {{"Hetmanie " + username}} </h2>
+    <h2 class="text">{{translations."lang".welcome_text + " " + username}} </h2>
     <br>
     <img class="fullw center" alt="Helldivers2" src="static/assets/coolHelldiversScreenshot.png">
     <br>

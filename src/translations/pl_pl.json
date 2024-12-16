@@ -3,6 +3,9 @@
   "description": "czyli {archiwum, kursy jak i zwykły mirror moich projektów} o motywie historycznym.",
 
   "navbar_index": "Indeks",
-  "navbar_courses": "Kursy"
+  "navbar_courses": "Kursy",
+  "navbar_projects": "Projekty",
+
+  "welcome_text": "Szczęść Boże, Hetmanie"
 }
 
