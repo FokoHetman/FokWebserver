@@ -14,8 +14,18 @@
     <a href="/courses">{{translations."lang".navbar_courses}}</a>
     <a href="/projects">{{translations."lang".navbar_projects}}</a>
     <div class="right">
-      <button> romanum(embed image here) </button>
-      <a href="/account"><img src="static/assets/whar.png"></a>
+      <select>
+        {{ 
+          for i in translations {
+            if i==lang {
+              "<option value=\"{{lang}}\" selected>hi</option>"
+            } else {
+              "<option value=\"{{lang}}\">hi</option>"
+            }
+          }
+        }}
+      </select>
+      <a href="/account">Account</a>
     </div>
   </div>
 
