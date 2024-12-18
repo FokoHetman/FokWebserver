@@ -1,3 +1,16 @@
+<script>
+function changeLang() {
+  var lang = document.getElementById("langselect").selectedIndex;
+  console.log(lang);
+  var language = "";
+  window.location.replace("/change_lang?lang=" + lang)
+}
+function refreshLang() {
+  console.log("todo");
+   
+}
+</script>
+
 <html>
 <head>
   <link rel="stylesheet" href="static/style.css">
@@ -14,13 +27,13 @@
     <a href="/courses">{{translations."lang".navbar_courses}}</a>
     <a href="/projects">{{translations."lang".navbar_projects}}</a>
     <div class="right">
-      <select>
+      <select id="langselect" onchange="changeLang();">
         {{ 
           for i in translations {
             if i==lang {
-              "<option value=\"{{lang}}\" selected>hi</option>"
+              "<option value=\"" + i + "\" selected>" + i + translations."i".flag + "</option>"
             } else {
-              "<option value=\"{{lang}}\">hi</option>"
+              "<option value=\"" + i + "\">" + i + translations."i".flag + "</option>"
             }
           }
         }}

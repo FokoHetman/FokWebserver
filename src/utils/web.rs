@@ -84,6 +84,14 @@ pub enum Token {
   OSparen,
   CSparen,
   Operator(Operator),
+
+  If,
+  Else,
+  For,
+  In,
+
+  Null,
+  Bool(bool),
 }
 
 
@@ -95,7 +103,9 @@ pub enum Operator {
   Division,
   Exponentiation,
   Indexation,
+  Nullus,
   Range,//..
+  Equals,//a==b
 }
 
 #[derive(Debug,PartialEq,Clone)]
@@ -104,11 +114,17 @@ pub enum Node {
   Integer(i32),
   Float(f64),
   Str(String),
+  Nullus,
   List(Vec<Box<Node>>),
 
   Identifier(String),
 
   Indexation(Box<Node>, Box<Node>),
+
+  Bool(bool),
+
+  IfStatement(/*condition*/Box<Node>, /*body*/Box<Node>, /*else*/Box<Node>),
+  ForLoop(/*identifier*/Box<Node>, /*list*/Box<Node>, /*body*/Box<Node>),
 }
 
 #[derive(Debug,Clone,PartialEq)]
@@ -117,7 +133,8 @@ pub enum Fructa {
   Str(String),
   Inventarii(Vec<Box<Fructa>>),
   Dictario(Vec<(Box<Fructa>, Box<Fructa>)>),
-  Nullus
+  Nullus,
+  Bool(bool),
 }
 
 impl Fructa {
@@ -160,6 +177,7 @@ pub fn parse_lang(tokens: Vec<Token>, parser: &mut Parser, env: &mut Env) -> Str
 
   let mut last_fruit = Fructa::Nullus;
   for node in nodes {
+    println!("{:#?}", node);
     last_fruit = evaluate(node, env);
   }
   
@@ -176,10 +194,14 @@ fn mul_str(str: String, n: i32) -> String {
   res
 }
 
+#[derive(Debug,Clone)]
 pub struct Env {
   data: Vec<(String, Fructa)>,
 }
 impl Env {
+  fn declare(&mut self,id: String, value: Fructa) {
+    self.data.push((id, value));
+  }
   fn get(&self, id: String) -> Fructa {
     for i in &self.data {
       if i.0==id {
@@ -231,11 +253,47 @@ pub fn evaluate(node: Node, env: &mut Env) -> Fructa {
         _ => panic!("not a dict")
       }
     },
+    Node::ForLoop(identifier, list, body) => {
+      let identifier = match *identifier {
+        Node::Identifier(s) => s,
+        _ => String::from("_")
+      };
+      match evaluate(*list, env) {
+        Fructa::Inventarii(l) => {
+          let mut evals = vec![];
+          for i in l {
+            let mut t_env = env.clone();
+            t_env.declare(identifier.clone(), *i);
+            evals.push(Box::new(evaluate(*body.clone(), &mut t_env)));
+          }
+          Fructa::Inventarii(evals)
+        },
+        Fructa::Dictario(d) => {
+          let mut evals = vec![];
+          for i in d {
+            let mut t_env = env.clone();
+            t_env.declare(identifier.clone(), *i.0);
+            evals.push(Box::new(evaluate(*body.clone(), &mut t_env)));
+          }
+          Fructa::Inventarii(evals)
+        },
+        _ => panic!("not iterable")
+      }
+    },
+    Node::IfStatement(condition, body, otherwise) => {
+      match evaluate(*condition, env) {
+        Fructa::Bool(false) | Fructa::Nullus => evaluate(*otherwise, env),
+        _ => evaluate(*body, env),
+      }
+    },
     Node::BinaryOperation(l, r, o) => {
       match o {
         /*Operator::Indexation => {
           
         },*/
+        Operator::Equals =>  {
+          Fructa::Bool(evaluate(*l, env)==evaluate(*r, env))
+        },
         Operator::Addition => {
           match evaluate(*l, env) {
             Fructa::Numerum(i) => {
@@ -327,7 +385,50 @@ impl Parser {
     value
   }
   pub fn rparse(&mut self) -> Node {
-    let left = self.parse_addition();
+    let left = self.parse_constructs();
+    left
+  }
+
+  pub fn parse_constructs(&mut self) -> Node {
+    if self.tokens[0]==Token::If {
+      let _ = self.eat();
+      let condition = self.parse_bools();
+      self.eat_expect(Token::OCparen);
+      let result = self.rparse();
+      self.eat_expect(Token::CCparen);
+      let mut otherwise = Node::Nullus;
+      if self.tokens[0]==Token::Else {
+        self.eat();
+        self.eat_expect(Token::OCparen);
+        otherwise = self.rparse();
+        self.eat_expect(Token::CCparen);
+      }
+      Node::IfStatement(Box::new(condition), Box::new(result), Box::new(otherwise))
+    
+    } else if self.tokens[0]==Token::For {
+      let _ = self.eat();
+      let identifier = self.parse_bools();
+      self.eat_expect(Token::In);
+      let list = self.rparse();
+      self.eat_expect(Token::OCparen);
+      let body = self.rparse();
+      self.eat_expect(Token::CCparen);
+      Node::ForLoop(Box::new(identifier), Box::new(list), Box::new(body))
+    } else {
+      self.parse_bools()
+    }
+  }
+
+  pub fn parse_bools(&mut self) -> Node {
+    let mut left = self.parse_addition();
+
+    while self.tokens.len()>0 && [Token::Operator(Operator::Equals)].contains(&self.tokens[0]) {
+      let operator = match self.eat() {
+        Token::Operator(o) => o,
+        _ => panic!("no"),
+      };
+      left = Node::BinaryOperation(Box::new(left), Box::new(self.parse_addition()), operator)
+    }
     left
   }
 
@@ -392,8 +493,18 @@ impl Parser {
 pub fn tokenize_lang(string: String) -> Vec<Token> {
   let mut chars = string.chars().collect::<Vec<char>>();
 
+  let special_ids: Vec<(&str, Token)> = vec![
+    ("if",Token::If),
+    ("else", Token::Else),
+    ("true", Token::Bool(true)),
+    ("false", Token::Bool(false)),
+    ("null", Token::Null),
+    ("for", Token::For),
+    ("in", Token::In),
+  ];
+
   let mut result: Vec<Token> = vec![];
-  while chars.len()>0 {
+  'main: while chars.len()>0 {
     println!("{}", chars[0]);
     match chars[0] {
       '(' => {result.push(Token::Oparen)},
@@ -406,11 +517,12 @@ pub fn tokenize_lang(string: String) -> Vec<Token> {
       '-' => {result.push(Token::Operator(Operator::Substraction))},
       '*' => {result.push(Token::Operator(Operator::Multiplication))},
       '/' => {result.push(Token::Operator(Operator::Division))},
+      '=' => {if chars[1]=='=' {chars.remove(0);result.push(Token::Operator(Operator::Equals))}},
       '.' => {result.push(Token::Operator(Operator::Indexation))},
       '\"' => {
         let mut buffer = String::new();
         chars.remove(0);
-        while chars[0]!='"' {
+        while chars.len()>0 && chars[0]!='"' {
           if chars[0]=='\\' && chars[1]=='"' {
             chars.remove(0);
           }
@@ -445,13 +557,21 @@ pub fn tokenize_lang(string: String) -> Vec<Token> {
               buffer += &chars[0].to_string();
               chars.remove(0);
             }
+            for i in &special_ids {
+              if buffer==i.0 {
+                result.push(i.1.clone());
+                continue 'main
+              }
+            }
             result.push(Token::Identifier(buffer));
             continue
           }
         }
       },
     }
-    chars.remove(0);
+    if chars.len()>0 {
+      chars.remove(0);
+    }
   }
   result
 
