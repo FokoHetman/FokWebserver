@@ -1,5 +1,6 @@
 {
   "title": "Hetmanate",
+  "hostname": "Hetmanate",
   "description": "aka {archive, courses and a mirror for my projects} with historical motives.",
   
   "navbar_index": "Index",
@@ -8,5 +9,9 @@
 
   "welcome_text": "Hello there, Hetman",
 
-  "flag": "🇬🇧"
+  "flag": "🇬🇧",
+
+
+  "terminal_title": "Terminal",
+  "terminal_desc": "Literally bash emulator; Runs commands in a boxed nix shell env.",
 }

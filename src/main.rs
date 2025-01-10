@@ -1,12 +1,17 @@
 use std::{
   fs, net::{TcpListener, TcpStream},
-  io::{Read,Write,self},str
+  io::{Read,Write,self},str,
+  sync::{Mutex,Arc},
+  process::{Command, Stdio},
 };
 mod utils;
 use utils::threading::ThreadPool;
-use utils::web;
+use utils::{web,language::{self,Fructa}};
 pub mod lib;
 use lib::json;
+
+use sqlite;
+
 
 struct Response {
   body: String,
@@ -38,21 +43,21 @@ impl Response {
 
 
 
-fn estabilish_listener(ip: &str) {
+fn estabilish_listener(ip: &str, controller: Arc<Mutex<Controller>>) {
   let listener = TcpListener::bind(ip).unwrap();
   println!("Listening on http://{ip}");
   let pool = ThreadPool::new(8);
 
   for stream in listener.incoming() {
     let stream = stream.unwrap();
-
-    pool.execute(|| {let _ = handle_connection(stream);});
+    let clone = Arc::clone(&controller);
+    pool.execute(|| {let _ = handle_connection(stream, clone);});
   }
 }
 
 
 
-fn load_lang(lang: &str) -> Vec<(Box<web::Fructa>, Box<web::Fructa>)> {
+fn load_lang(lang: &str) -> Vec<(Box<Fructa>, Box<Fructa>)> {
   let mut result = vec![];
 
   let lang_json = json::parse_json(fs::read_to_string("translations/".to_string()+&lang+".json").unwrap());
@@ -62,13 +67,13 @@ fn load_lang(lang: &str) -> Vec<(Box<web::Fructa>, Box<web::Fructa>)> {
         result.push(
           (match i.0 {
             json::JsonElem::String(s) => {
-              Box::new(web::Fructa::Str(s))
+              Box::new(Fructa::Str(s))
             },
             _ => panic!("?")
           },
           match i.1 {
             json::JsonElem::String(s) => {
-              Box::new(web::Fructa::Str(s))
+              Box::new(Fructa::Str(s))
             },
             _ => panic!("?")
           }
@@ -82,7 +87,7 @@ fn load_lang(lang: &str) -> Vec<(Box<web::Fructa>, Box<web::Fructa>)> {
 }
 
 
-fn handle_connection(mut stream: TcpStream) {
+fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) {
   let mut buffer = [0; 1024];
   stream.read(&mut buffer).unwrap();
   let req = str::from_utf8(&buffer).unwrap();
@@ -121,17 +126,21 @@ fn handle_connection(mut stream: TcpStream) {
 
   let langs = vec!["en_uk", "pl_pl"];
 
-
   let languages = 
       ("translations".to_string(), 
-        web::Fructa::Dictario(
-           langs.clone().into_iter().map(|x| (Box::new(web::Fructa::Str(x.to_string())), Box::new(web::Fructa::Dictario(load_lang(x))))).into_iter().collect::<Vec<(Box<web::Fructa>, Box<web::Fructa>)>>()
+        Fructa::Dictario(
+           langs.clone().into_iter().map(|x| (Box::new(Fructa::Str(x.to_string())), Box::new(Fructa::Dictario(load_lang(x))))).into_iter().collect::<Vec<(Box<Fructa>, Box<Fructa>)>>()
         ));
 
       /*vec![
         (Box::new(web::Fructa::Str("en_uk".to_string())), Box::new(web::Fructa::Dictario(load_lang("en_uk")))),
         (Box::new(web::Fructa::Str("pl_pl".to_string())), Box::new(web::Fructa::Dictario(load_lang("pl_pl")))),
       ]));*/
+
+  /*help
+  let lock = controller.lock().unwrap();
+  *lock.db_conn.prepare(statement)
+   */
 
 
   let mut response = Response::new();
@@ -150,8 +159,8 @@ fn handle_connection(mut stream: TcpStream) {
     match dir {
       "/" | "/home" | "/homepage" | "/index" | "/index.html" => {
         response.body = web::render_template("templates/index.html", vec![
-            ("username".to_string(), web::Fructa::Str("Foko".to_string())),
-            ("lang".to_string(), web::Fructa::Str(lang)),
+            ("username".to_string(), Fructa::Str("Foko".to_string())),
+            ("lang".to_string(), Fructa::Str(lang)),
             languages
         ]);
         response.code = 200;
@@ -175,7 +184,7 @@ fn handle_connection(mut stream: TcpStream) {
       },
       "/test" => {
         response.body = web::render_template("templates/test.html", vec![
-            ("lang".to_string(), web::Fructa::Str(lang)),
+            ("lang".to_string(), Fructa::Str(lang)),
             languages
         ]);
         response.code = 200;
@@ -183,6 +192,31 @@ fn handle_connection(mut stream: TcpStream) {
       "/favicon.ico" => {
         let _ = stream.write(&fs::read(dir[1..].to_string()).unwrap());
         return;
+      },
+      "/terminal" => {
+        let mut run = None;
+        for i in params {
+          match i.0 {
+            "command" => {
+              run = Some(i.1);
+            },
+            _ => {}
+          }
+        }
+        match run {
+          Some(i) => {
+            response.body = "{\"help\": \"me\"}".to_string();
+            response.code = 200;
+          },
+          None => {
+            response.body = web::render_template("templates/projects/emulators/terminal.html", vec![
+              ("username".to_string(), Fructa::Str("Foko".to_string())),
+              ("lang".to_string(), Fructa::Str(lang)),
+              languages
+            ]);
+            response.code = 200;
+          }
+        }
       },
       _ => {
         println!("{}", dir);
@@ -195,6 +229,25 @@ fn handle_connection(mut stream: TcpStream) {
 }
 
 
+struct  Controller {
+  db_conn: sqlite::Connection,
+}
+
+
+fn start_terminal_session() {
+  let mut child_shell = Command::new("nix-shell")
+      .stdin(Stdio::piped())
+      .stdout(Stdio::piped())
+      .spawn().unwrap();
+  
+}
+
+
+
 fn main() {
-  estabilish_listener("0.0.0.0:2137");
+  let mut controller = Controller {
+    db_conn: sqlite::open("databases/main.db").unwrap(),
+  };
+  let mut controller = Arc::new(Mutex::new(controller));
+  estabilish_listener("0.0.0.0:2137", controller);
 }

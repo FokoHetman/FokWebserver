@@ -20,6 +20,28 @@ body {
 }
 
 
+
+.terminal {
+  background-color: rgb(40,40,40);
+  height: 60%;
+  border-radius: 15px;
+  border: 1px solid rgb(142, 192, 124);
+  text-align: left;
+  margin-left: auto;
+  margin-right: auto;
+}
+.terminal p {
+  display: inline;
+}
+.commandline {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+}
+
+
 .text {
   margin-left: 20%;
 }
