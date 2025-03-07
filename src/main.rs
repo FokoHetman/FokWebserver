@@ -10,7 +10,7 @@ use utils::{web,language::{self,Fructa}};
 pub mod lib;
 use lib::json;
 
-use sqlite;
+//use sqlite;
 
 
 struct Response {
@@ -230,7 +230,7 @@ fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) 
 
 
 struct  Controller {
-  db_conn: sqlite::Connection,
+//  db_conn: sqlite::Connection,
 }
 
 
@@ -246,7 +246,7 @@ fn start_terminal_session() {
 
 fn main() {
   let mut controller = Controller {
-    db_conn: sqlite::open("databases/main.db").unwrap(),
+    //db_conn: sqlite::open("databases/main.db").unwrap(),
   };
   let mut controller = Arc::new(Mutex::new(controller));
   estabilish_listener("0.0.0.0:2137", controller);

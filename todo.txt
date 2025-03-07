@@ -1,5 +1,5 @@
 finish template lang:
-* loops
-* conditionals
-* parsing !!
+* math (not yet implemented fully lmfao)
+* account system (finally pls)
+* courses!!!!!!!!!1
 
