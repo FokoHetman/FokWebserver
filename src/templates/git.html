@@ -1,12 +1,3 @@
-<script>
-function changeLang() {
-  var lang = document.getElementById("langselect").selectedIndex;
-  console.log(lang);
-  var language = "";
-  window.location.replace("/change_lang?redirect=projects?lang=" + lang)
-}
-</script>
-
 <html>
 <head>
   <link rel="stylesheet" href="static/style.css">
@@ -43,8 +34,10 @@ function changeLang() {
     <p class="center">
     {{
       for i in repos {
-        "<div class=\"content\" style=\"--preview: url(&quot;" + i.img_path + "&quot);\">
+        "<div class=\"content\" onclick=\"openProject(&quot;" + i.id + "&quot)\" style=\"--preview: url(&quot;" + i.img_path + "&quot);\">
+          <p id=\"date\"> " + i.date + " </p>
           <h2> " + i.name + " </h2>
+          <div id=\"" + i.id + "\" class=\"tags\"> </div>
           <p> " + i.desc + " </p>
         </div>"
       }
@@ -53,3 +46,42 @@ function changeLang() {
   </div>
 </body>
 </html>
+
+<script>
+function changeLang() {
+  var lang = document.getElementById("langselect").selectedIndex;
+  console.log(lang);
+  var language = "";
+  window.location.replace("/change_lang?redirect=projects?lang=" + lang)
+}
+
+
+function openProject(id) {
+  window.location.replace("?project=" + id);
+}
+
+
+
+function addTag(id, tag, color) {
+  var p = document.createElement("p");
+  p.innerText = tag;
+  p.style="background-color: " + color;
+  p.className = "tag";
+  document.getElementById(id).appendChild(p);
+}
+{{
+  for i in repos {
+    for x in i.tags {
+      if x.0 == "github" {""} else {
+        "addTag(\"" + i.id + "\",\"" + x.0 + "\",\"" + x.1 + "\");"
+      }
+    }
+  }
+}}
+
+
+
+
+</script>
+
+

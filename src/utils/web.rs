@@ -1,30 +1,115 @@
-use std::{fs, path::Path, process::Command};
+use std::{fs, path::Path, process::Command, time::UNIX_EPOCH};
 use crate::utils::language::{self,Fructa};
 
 
 static UNKNOWN_IMAGE_PATH: &str = "assets/whar.png";
 
+
+pub fn render_gitrepo(path: &str, args: Vec<(String, Fructa)>) -> String {
+  let mut args = args;
+
+  let creation_date = (Path::new(path).metadata().unwrap().created().unwrap().duration_since(UNIX_EPOCH).unwrap().as_secs() / 31536000) + 1970;
+
+  let root = path.to_owned();
+  let desc_file = fs::read_to_string(root.clone() + "/description").unwrap().to_owned();
+  let splt = desc_file.split(";").collect::<Vec<&str>>();
+
+  let name = Box::new(Fructa::Str(splt[0].to_string()));
+  let desc = Box::new(Fructa::Str(splt[1].to_string()));
+
+  let tags;
+  if splt.len()>2 {
+    tags = splt[2].split("|").collect::<Vec<&str>>().iter().map(|x|
+
+                                //      [Tag, Color]
+      Box::new(Fructa::Inventarii(vec![Box::new(Fructa::Str(x.split(":").collect::<Vec<&str>>()[0].to_string())), Box::new(Fructa::Str(x.split(":").collect::<Vec<&str>>()[1].trim().to_string()))]))
+
+    ).collect::<Vec<Box<Fructa>>>();
+  } else {
+    tags = vec![];
+  }
+
+  let parts = root.split("/").collect::<Vec<&str>>();
+  let id = parts.last().unwrap();
+  let mut parts = parts.clone();
+  parts.pop();
+  let user = parts.last().unwrap();
+
+  let img_path;
+  let pathe = root.clone() + "/banner.png";
+  if Path::new(&pathe).exists() {
+    img_path = "dynamic/".to_owned() + id + "_banner.png";
+    Command::new("cp").arg(pathe).arg("static/".to_owned() + &img_path).output().unwrap().stdout;
+  } else {
+    img_path = UNKNOWN_IMAGE_PATH.to_string();
+  }
+
+
+
+  args.push(("repo".to_string(), Fructa::Dictario(vec![
+    (Box::new(Fructa::Str(String::from("id"))), Box::new(Fructa::Str(id.to_string()))),
+    (Box::new(Fructa::Str(String::from("user"))), Box::new(Fructa::Str(user.to_string()))),
+    (Box::new(Fructa::Str(String::from("name"))), name),
+    (Box::new(Fructa::Str(String::from("desc"))), desc),
+    (Box::new(Fructa::Str(String::from("tags"))), Box::new(Fructa::Inventarii(tags))),
+
+    (Box::new(Fructa::Str(String::from("img_path"))), Box::new(Fructa::Str(  img_path  ))),
+    (Box::new(Fructa::Str(String::from("date"))), Box::new(Fructa::Str( creation_date.to_string() ))),
+
+  ])));
+  render_template("templates/repo.html", args)
+}
+
 pub fn render_gituser(path: &str, args: Vec<(String, Fructa)>) -> String {
   let mut repositories: Vec<Box<Fructa>> = vec![];
   for i in fs::read_dir(path).unwrap() {
-    let root = i.unwrap().path().to_str().unwrap().to_owned();
+    let i = i.unwrap();
+    let creation_date = (i.metadata().unwrap().created().unwrap().duration_since(UNIX_EPOCH).unwrap().as_secs() / 31536000) + 1970;
+    let root = i.path().to_str().unwrap().to_owned();
     let desc_file = fs::read_to_string(root.clone() + "/description").unwrap().to_owned();
     let splt = desc_file.split(";").collect::<Vec<&str>>();
+    
+    let parts = root.split("/").collect::<Vec<&str>>();
+    let id = parts.last().unwrap();
+    let mut parts = parts.clone();
+    parts.pop();
+    let user = parts.last().unwrap();
+
+
     let img_path;
     let pathe = root.clone() + "/banner.png";
+
     if Path::new(&pathe).exists() {
-      img_path = "dynamic/".to_owned() + root.split("/").collect::<Vec<&str>>().last().unwrap() + "_banner.png";
+      img_path = "dynamic/".to_owned() + id + "_banner.png";
       Command::new("cp").arg(pathe).arg("static/".to_owned() + &img_path).output().unwrap().stdout;
     } else {
       img_path = UNKNOWN_IMAGE_PATH.to_string();
+    }
+
+    let tags;
+    if splt.len()>2 {
+      tags = splt[2].split("|").collect::<Vec<&str>>().iter().map(|x|
+
+        //      [Tag, Color]
+        Box::new(Fructa::Inventarii(vec![Box::new(Fructa::Str(x.split(":").collect::<Vec<&str>>()[0].to_string())), Box::new(Fructa::Str(x.split(":").collect::<Vec<&str>>()[1].trim().to_string()))]))
+
+      ).collect::<Vec<Box<Fructa>>>();
+    } else {
+      tags = vec![];
     }
     
 
     repositories.push(Box::new(
       Fructa::Dictario(vec![
+        (Box::new(Fructa::Str(String::from("id"))), Box::new(Fructa::Str(id.to_string()))),
+        (Box::new(Fructa::Str(String::from("user"))), Box::new(Fructa::Str(user.to_string()))),
         (Box::new(Fructa::Str(String::from("name"))), Box::new(Fructa::Str(splt[0].to_string()))),
         (Box::new(Fructa::Str(String::from("desc"))), Box::new(Fructa::Str(splt[1].to_string()))),
+
+        (Box::new(Fructa::Str(String::from("tags"))), Box::new(Fructa::Inventarii(tags))),
+
         (Box::new(Fructa::Str(String::from("img_path"))), Box::new(Fructa::Str(  img_path  ))),
+        (Box::new(Fructa::Str(String::from("date"))), Box::new(Fructa::Str( creation_date.to_string() ))),
       ]
       )
     ));

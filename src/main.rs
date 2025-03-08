@@ -166,11 +166,26 @@ fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) 
         response.code = 200;
       },
       "/projects" => {
-        response.body = web::render_gituser("/home/git/FokoHetman/", vec![
+        let mut render_project = false;
+        for i in params {
+          match i.0 {
+            "project" => {
+              render_project = true;
+              response.body = web::render_gitrepo(&("/home/git/FokoHetman/".to_owned() + i.1), vec![
+                ("lang".to_string(), Fructa::Str(lang.clone())),
+                languages.clone()
+              ]);
+            },
+            _ => {}
+          }
+        }
+        if !render_project {
+          response.body = web::render_gituser("/home/git/FokoHetman/", vec![
             ("username".to_string(), Fructa::Str("Foko".to_string())),
             ("lang".to_string(), Fructa::Str(lang)),
             languages
-        ]);
+          ]);
+        }
       },
       "/change_lang"  => {
         let mut lang = String::from("en_uk");

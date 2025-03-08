@@ -1,0 +1,79 @@
+<script>
+function changeLang() {
+  var lang = document.getElementById("langselect").selectedIndex;
+  console.log(lang);
+  var language = "";
+  window.location.replace("/change_lang?redirect=projects?lang=" + lang)
+}
+</script>
+
+<html>
+<head>
+  <link rel="stylesheet" href="static/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+</head>
+<body>
+  <div class="header">
+    <h1>{{translations."lang".title}}</h1>
+    <p style="font-size:12px">{{translations."lang".description}}</p>
+  </div>
+  <div id="navbar">
+    <a href="/">{{translations."lang".navbar_index}}</a>
+    <a href="/courses">{{translations."lang".navbar_courses}}</a>
+    <a class="active" href="/projects">{{translations."lang".navbar_projects}}</a>
+    <div class="right">
+      <select id="langselect" onchange="changeLang();">
+        {{ 
+          for i in translations {
+            if i==lang {
+              "<option value=\"" + i + "\" selected>" + i + translations."i".flag + "</option>"
+            } else {
+              "<option value=\"" + i + "\">" + i + translations."i".flag + "</option>"
+            }
+          }
+        }}
+      </select>
+      <a href="/account">Account</a>
+    </div>
+  </div>
+  <br>
+  <div style="padding-left:16px">
+  <div class="text">
+    <h2> {{repo.name}} </h2>
+    {{
+      for i in repo.tags {
+        if i.0 == "github" {""} else {
+          "<p style=\"background-color: " + i.1 + "\" class=\"tag\">" + i.0 + "</p>"
+        }
+      }
+    }}
+    <br>
+    {{repo.desc}}
+  </div>
+  <br><br>
+  
+  <div class="fullw center"> <img class="fullw center" src="static/{{repo.img_path}}"> </div>
+  <br>
+  
+  <div class="text">
+    Location: <a href="ssh://git@fokopi:{{repo.user}}/{{repo.id}}">git@fokopi:{{repo.user}}/{{repo.id}}</a>
+    <br>
+    {{
+      for i in repo.tags {
+        if i.0 == "github" {
+          "GitHub Mirror: <a href=\"https://github.com/" + repo.user + "/" + repo.id + "\">" + repo.name + "</a><br>"
+        } else {
+          ""
+        }
+      }
+    }}
+    Created: {{repo.date}}<br>
+    Author: {{repo.user}}<br>
+
+    <br><br><br><br><br><br><br>
+  </div>
+  </div>
+
+</body>
+</html>
