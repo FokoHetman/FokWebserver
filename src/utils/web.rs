@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{fs, path::Path, process::Command};
 use crate::utils::language::{self,Fructa};
 
 
@@ -11,18 +11,20 @@ pub fn render_gituser(path: &str, args: Vec<(String, Fructa)>) -> String {
     let desc_file = fs::read_to_string(root.clone() + "/description").unwrap().to_owned();
     let splt = desc_file.split(";").collect::<Vec<&str>>();
     let img_path;
-    let pathe = root + "/banner.png";
+    let pathe = root.clone() + "/banner.png";
     if Path::new(&pathe).exists() {
       img_path = pathe;
     } else {
       img_path = UNKNOWN_IMAGE_PATH.to_string();
     }
+    let destination = ("dynamic/".to_owned() + root.split("/").collect::<Vec<&str>>().last().unwrap() + "_banner.png");
+    Command::new("cp").arg(img_path).arg(&destination).output().unwrap().stdout;
 
     repositories.push(Box::new(
       Fructa::Dictario(vec![
         (Box::new(Fructa::Str(String::from("name"))), Box::new(Fructa::Str(splt[0].to_string()))),
         (Box::new(Fructa::Str(String::from("desc"))), Box::new(Fructa::Str(splt[1].to_string()))),
-        (Box::new(Fructa::Str(String::from("img_path"))), Box::new(Fructa::Str(  img_path  ))),
+        (Box::new(Fructa::Str(String::from("img_path"))), Box::new(Fructa::Str(  destination  ))),
       ]
       )
     ));

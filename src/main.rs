@@ -152,7 +152,7 @@ fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) 
     }
   }
 
-  if dir.starts_with("/static/") && !dir.contains("..") {
+  if (dir.starts_with("/static/") || dir.starts_with("/dynamic/")) && !dir.contains("..") {
     let _ = stream.write(&fs::read(dir[1..].to_string()).unwrap());
   } else {
 
