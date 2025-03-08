@@ -184,7 +184,14 @@ pub fn evaluate(node: Node, env: &mut Env) -> Fructa {
             _ => panic!("?")
           }
 
-        }
+        },
+        Fructa::Inventarii(i) => {
+          let rid = match *r {
+            Node::Integer(i) => i,
+            _ => panic!("hi"),
+          };
+          *i[rid as usize].clone()
+        },
         _ => panic!("not a dict")
       }
     },

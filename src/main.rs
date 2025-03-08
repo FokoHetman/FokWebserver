@@ -165,6 +165,13 @@ fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) 
         ]);
         response.code = 200;
       },
+      "/projects" => {
+        response.body = web::render_gituser("/home/git/FokoHetman/", vec![
+            ("username".to_string(), Fructa::Str("Foko".to_string())),
+            ("lang".to_string(), Fructa::Str(lang)),
+            languages
+        ]);
+      },
       "/change_lang"  => {
         let mut lang = String::from("en_uk");
         let mut redirect = String::from("/");

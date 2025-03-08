@@ -1,3 +1,12 @@
+body {
+  --gray: rgb(40,40,40);
+  --border-color: rgb(10, 10, 10);
+  --hover-border-color: rgb(142, 192, 124);
+}
+
+
+
+
 @font-face {
   font-family: 'Fira Code';
   src: url('woff2/FiraCode-Medium.woff2') format('woff2'),
@@ -52,6 +61,7 @@ body {
 }
 
 #navbar {
+  z-index: 1;
   position: sticky;
   top: 0;
   overflow: hidden;
@@ -114,8 +124,45 @@ body {
   margin-right: auto;
 }
 
+
 .right {
   display: block;
   text-align: center;
   float: right;
+}
+
+
+
+
+
+.content {
+	width: 60%;
+  aspect-ratio: 16/9;
+	background-size: cover;
+	background-repeat: no-repeat;
+	background-image: var(--preview);
+  opacity: 0.8;
+	
+
+  display: block;
+  text-align: left;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 2%;
+
+
+	padding: 0.5rem;
+	box-sizing: border-box;
+	border-radius: 0.7rem;
+	border: 2px solid var(--border-color);
+	box-shadow: 0 0rem 2rem rgba(0, 0, 0, 0.112);
+	transition: 0.2s;
+  position: relative;
+}
+
+.content:hover {
+  width: 62%;
+  aspect-ratio: 15/8.17;
+  border-color: var(--hover-border-color);
+  opacity: 1;
 }

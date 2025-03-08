@@ -1,5 +1,44 @@
-use std::fs;
+use std::{fs, path::Path};
 use crate::utils::language::{self,Fructa};
+
+
+static UNKNOWN_IMAGE_PATH: &str = "assets/whar.png";
+
+pub fn render_gituser(path: &str, args: Vec<(String, Fructa)>) -> String {
+  let mut repositories: Vec<Box<Fructa>> = vec![];
+  for i in fs::read_dir(path).unwrap() {
+    let root = i.unwrap().path().to_str().unwrap().to_owned();
+    let desc_file = fs::read_to_string(root.clone() + "/description").unwrap().to_owned();
+    let splt = desc_file.split(";").collect::<Vec<&str>>();
+    let img_path;
+    let pathe = root + "/banner.png";
+    if Path::new(&pathe).exists() {
+      img_path = pathe;
+    } else {
+      img_path = UNKNOWN_IMAGE_PATH.to_string();
+    }
+
+    repositories.push(Box::new(
+      Fructa::Dictario(vec![
+        (Box::new(Fructa::Str(String::from("name"))), Box::new(Fructa::Str(splt[0].to_string()))),
+        (Box::new(Fructa::Str(String::from("desc"))), Box::new(Fructa::Str(splt[1].to_string()))),
+        (Box::new(Fructa::Str(String::from("img_path"))), Box::new(Fructa::Str(  img_path  ))),
+      ]
+      )
+    ));
+  };
+  let mut args = args;
+  args.push(("repos".to_string(), Fructa::Inventarii(repositories)));
+  render_template("templates/git.html", args)
+}
+
+
+
+
+
+
+
+
 
 
 
