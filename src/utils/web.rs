@@ -13,8 +13,8 @@ pub fn render_gituser(path: &str, args: Vec<(String, Fructa)>) -> String {
     let img_path;
     let pathe = root.clone() + "/banner.png";
     if Path::new(&pathe).exists() {
-      img_path = "static/dynamic/".to_owned() + root.split("/").collect::<Vec<&str>>().last().unwrap() + "_banner.png";
-      Command::new("cp").arg(pathe).arg(img_path.clone()).output().unwrap().stdout;
+      img_path = "dynamic/".to_owned() + root.split("/").collect::<Vec<&str>>().last().unwrap() + "_banner.png";
+      Command::new("cp").arg(pathe).arg("static/".to_owned() + &img_path).output().unwrap().stdout;
     } else {
       img_path = UNKNOWN_IMAGE_PATH.to_string();
     }
