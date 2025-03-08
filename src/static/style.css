@@ -136,11 +136,12 @@ body {
 
 
 .content {
+
 	width: 60%;
   aspect-ratio: 16/9;
 	background-size: cover;
 	background-repeat: no-repeat;
-	background-image: var(--preview);
+
   opacity: 0.8;
 	
 
@@ -158,6 +159,19 @@ body {
 	box-shadow: 0 0rem 2rem rgba(0, 0, 0, 0.112);
 	transition: 0.2s;
   position: relative;
+}
+.content::after {
+  content: "";
+  background-image: var(--preview);
+  background-size: cover;
+	background-repeat: no-repeat;
+  opacity: 0.5;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  position: absolute;
+  z-index: -1;   
 }
 
 .content:hover {

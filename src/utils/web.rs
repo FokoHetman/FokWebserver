@@ -13,18 +13,18 @@ pub fn render_gituser(path: &str, args: Vec<(String, Fructa)>) -> String {
     let img_path;
     let pathe = root.clone() + "/banner.png";
     if Path::new(&pathe).exists() {
-      img_path = pathe;
+      img_path = "dynamic/".to_owned() + root.split("/").collect::<Vec<&str>>().last().unwrap() + "_banner.png";
+      Command::new("cp").arg(pathe).arg(img_path.clone()).output().unwrap().stdout;
     } else {
       img_path = UNKNOWN_IMAGE_PATH.to_string();
     }
-    let destination = ("dynamic/".to_owned() + root.split("/").collect::<Vec<&str>>().last().unwrap() + "_banner.png");
-    Command::new("cp").arg(img_path).arg(&destination).output().unwrap().stdout;
+    
 
     repositories.push(Box::new(
       Fructa::Dictario(vec![
         (Box::new(Fructa::Str(String::from("name"))), Box::new(Fructa::Str(splt[0].to_string()))),
         (Box::new(Fructa::Str(String::from("desc"))), Box::new(Fructa::Str(splt[1].to_string()))),
-        (Box::new(Fructa::Str(String::from("img_path"))), Box::new(Fructa::Str(  destination  ))),
+        (Box::new(Fructa::Str(String::from("img_path"))), Box::new(Fructa::Str(  img_path  ))),
       ]
       )
     ));
