@@ -142,7 +142,8 @@ fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) 
   *lock.db_conn.prepare(statement)
    */
 
-  let git_log = Command::new("sh").arg("-c").arg("git --git-dir /home/git/FokoHetman/blog.git log --pretty=format:'{%n  \"commit\": \"%H\",%n  \"author\": \"%aN <%aE>\",%n  \"date\": \"%ad\",%n  \"message\": \"%f\",%n  \"desc\": \"%s\",%n},'     $@ |     perl -pe 'BEGIN{print \"[\"}; END{print \"]\n\"}' |     perl -pe 's/},]/}]/'").output().unwrap().stdout;
+  let git_log = Command::new("sh").arg("-c").arg("git --git-dir /home/git/FokoHetman/blog log --pretty=format:'{%n  \"commit\": \"%H\",%n  \"author\": \"%aN <%aE>\",%n  \"date\": \"%ad\",%n  \"message\": \"%f\",%n  \"desc\": \"%s\",%n},'     $@ |     perl -pe 'BEGIN{print \"[\"}; END{print \"]\n\"}' |     perl -pe 's/},]/}]/'").output().unwrap().stdout;
+  println!("{}", str::from_utf8(&git_log).unwrap().to_string());
   let blog_json = json::parse_json(str::from_utf8(&git_log).unwrap().to_string());
 
   let blog = Fructa::Inventarii(blog_json.body.get_list().iter().map(|x| Box::new(Fructa::Dictario(vec![
@@ -153,6 +154,7 @@ fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) 
     (Box::new(Fructa::Str(String::from("desc"))), Box::new(Fructa::Str(x.get("desc").get_str()))),
   ]))).collect::<Vec<Box<Fructa>>>());
 
+  println!("{:#?}", blog);
 
   let mut response = Response::new();
 

@@ -41,17 +41,19 @@ function changeLang() {
   <div style="padding-left:16px">
     <h2 class="text">{{translations."lang".welcome_text + " " + username}} </h2>
     <br>
-    <img class="fullw center" alt="Helldivers2" src="static/assets/coolHelldiversScreenshot.png">
     <br>
+    <div class="text">
     {{
       for i in blog {
         "<div class=\"post\">
+        <p style=\"float: right\">" + i.date + "</p>
         <h2>" + i.title + "</h2><br>
         <p>" + i.desc + "</p><br>
-        <p>~ " + i.author + " " + i.date + "</p><br>
+        <p>~ " + i.author + "</p><br>
         </div>"
       }
     }}
+    </div>
     <p class="center">{{
 "
 To moja droga z piekła do piekła,

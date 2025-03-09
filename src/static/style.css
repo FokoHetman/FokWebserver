@@ -253,3 +253,24 @@ body {
 a:visited {
   color: blue;
 }
+
+
+.post {
+  width: 75%;
+  background-color: rgba(20,20,20,0.8);
+  border-radius: 0.5em;
+  border: 1px solid;
+  border-color: var(--border-color);
+  transition: 0.5s;
+}
+.post:hover {
+  border-color: var(--hover-border-color);
+}
+.post p {
+  margin-left: 2%;
+}
+.post h2 {
+  width: 100%;
+  border-bottom: 1px solid;
+  text-indent: 5%;
+}
