@@ -43,6 +43,15 @@ function changeLang() {
     <br>
     <img class="fullw center" alt="Helldivers2" src="static/assets/coolHelldiversScreenshot.png">
     <br>
+    {{
+      for i in blog {
+        "<div class="post">
+        <h2>" + i.title + "</h2><br>
+        <p>" + i.desc + "</p><br>
+        <p>~ " + i.author + " " + i.date + "</p><br>
+        </div>"
+      }
+    }}
     <p class="center">{{
 "
 To moja droga z piekła do piekła,

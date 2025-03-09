@@ -142,6 +142,17 @@ fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) 
   *lock.db_conn.prepare(statement)
    */
 
+  let git_log = Command::new("sh").arg("-c").arg("git --git-dir /home/git/FokoHetman/blog.git log --pretty=format:'{%n  \"commit\": \"%H\",%n  \"author\": \"%aN <%aE>\",%n  \"date\": \"%ad\",%n  \"message\": \"%f\",%n  \"desc\": \"%s\",%n},'     $@ |     perl -pe 'BEGIN{print \"[\"}; END{print \"]\n\"}' |     perl -pe 's/},]/}]/'").output().unwrap().stdout;
+  let blog_json = json::parse_json(str::from_utf8(&git_log).unwrap().to_string());
+
+  let blog = Fructa::Inventarii(blog_json.body.get_list().iter().map(|x| Box::new(Fructa::Dictario(vec![
+    (Box::new(Fructa::Str(String::from("commit"))), Box::new(Fructa::Str(x.get("commit").get_str()))),
+    (Box::new(Fructa::Str(String::from("author"))), Box::new(Fructa::Str(x.get("author").get_str().split(" ").collect::<Vec<&str>>()[0].to_string()))),
+    (Box::new(Fructa::Str(String::from("date"))), Box::new(Fructa::Str(x.get("date").get_str()))),
+    (Box::new(Fructa::Str(String::from("title"))), Box::new(Fructa::Str(x.get("message").get_str()))),
+    (Box::new(Fructa::Str(String::from("desc"))), Box::new(Fructa::Str(x.get("desc").get_str()))),
+  ]))).collect::<Vec<Box<Fructa>>>());
+
 
   let mut response = Response::new();
 
@@ -161,6 +172,7 @@ fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) 
         response.body = web::render_template("templates/index.html", vec![
             ("username".to_string(), Fructa::Str("Foko".to_string())),
             ("lang".to_string(), Fructa::Str(lang)),
+            ("blog".to_string(), blog),
             languages
         ]);
         response.code = 200;
