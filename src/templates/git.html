@@ -34,12 +34,14 @@
     <p class="center">
     {{
       for i in repos {
+        if i.id=="blog" { "" } else {
         "<div class=\"content\" onclick=\"openProject(&quot;" + i.id + "&quot)\" style=\"--preview: url(&quot;" + i.img_path + "&quot);\">
           <p id=\"date\"> " + i.date + " </p>
           <h2> " + i.name + " </h2>
           <div id=\"" + i.id + "\" class=\"tags\"> </div>
           <p> " + i.desc + " </p>
         </div>"
+        }
       }
     }}
     </p>

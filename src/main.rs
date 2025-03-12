@@ -142,7 +142,7 @@ fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) 
   *lock.db_conn.prepare(statement)
    */
 
-  let git_log = Command::new("sh").arg("-c").arg("git --git-dir /home/git/FokoHetman/blog log --pretty=format:'{%n  \"commit\": \"%H\",%n  \"author\": \"%aN <%aE>\",%n  \"date\": \"%ad\",%n  \"message\": \"%f\",%n  \"desc\": \"%s\",%n},'     $@ |     perl -pe 'BEGIN{print \"[\"}; END{print \"]\n\"}' |     perl -pe 's/},]/}]/'").output().unwrap().stdout;
+  let git_log = Command::new("sh").arg("-c").arg("git --git-dir /home/git/FokoHetman/blog log --pretty=format:'{%n  \"commit\": \"%H\",%n  \"author\": \"%aN <%aE>\",%n  \"date\": \"%ad\",%n  \"message\": \"%f\",%n  \"desc\": \"%b\",%n},'     $@ |     perl -pe 'BEGIN{print \"[\"}; END{print \"]\n\"}' |     perl -pe 's/},]/}]/'").output().unwrap().stdout;
   println!("{}", str::from_utf8(&git_log).unwrap().to_string());
   let blog_json = json::parse_json(str::from_utf8(&git_log).unwrap().to_string());
 
@@ -260,6 +260,8 @@ fn handle_connection(mut stream: TcpStream, controller: Arc<Mutex<Controller>>) 
         response.code = 404;
       },
     }
+    /* tailscale sheise*/ 
+    response.body = response.body.replace("static/", "https://fokopi.axolotl-snake.ts.net:10000/static/");
     let _ = stream.write(response.build().as_bytes());
   }
 }
@@ -285,5 +287,5 @@ fn main() {
     //db_conn: sqlite::open("databases/main.db").unwrap(),
   };
   let mut controller = Arc::new(Mutex::new(controller));
-  estabilish_listener("0.0.0.0:2137", controller);
+  estabilish_listener("127.0.0.1:443", controller);
 }
